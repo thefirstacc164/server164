@@ -15,6 +15,7 @@ FILE_PATH = "clicker_save_db.json"
 GITHUB_API_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{FILE_PATH}"
 
 def get_db_from_github():
+    """Retrieves the global player registry from GitHub."""
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
@@ -24,9 +25,11 @@ def get_db_from_github():
         content_b64 = resp.json()["content"]
         decoded_json = base64.b64decode(content_b64).decode("utf-8")
         return json.loads(decoded_json), resp.json().get("sha")
+    # Base template if the file doesn't exist
     return {"players": {}, "accounts": {}}, None
 
 def save_db_to_github(db_data, current_sha=None):
+    """Commits updated data back to GitHub."""
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
@@ -50,6 +53,7 @@ def save_db_to_github(db_data, current_sha=None):
     return put_resp.status_code in [200, 201]
 
 def hash_password(password):
+    """Hashes a password using SHA-256."""
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 # --- LEADERBOARD HTML ---
@@ -81,10 +85,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 </tr>
             </thead>
             <tbody id="leaderboard-body">
-                <tr><td colspan="3" style="text-align:center; color:#888;">Synchronizing...</td></tr>
+                <tr><td colspan="3" style="text-align:center; color:#888;">Synchronizing game matrix telemetry...</td></tr>
             </tbody>
         </table>
     </div>
+
     <script>
         function refreshLeaderboard() {
             fetch('/api/scores')
@@ -95,7 +100,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 let playerList = Object.keys(data.players).map(name => ({name: name, ...data.players[name]}));
                 playerList.sort((a, b) => (b.money || 0) - (a.money || 0));
                 if(playerList.length === 0) {
-                    tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; color:#888;'>No players yet.</td></tr>";
+                    tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; color:#888;'>No active user nodes registered.</td></tr>";
                     return;
                 }
                 playerList.forEach((player, index) => {
@@ -104,7 +109,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                             <td class="rank">#${index + 1}</td>
                             <td><b>${player.name}</b></td>
                             <td class="cash-amount">$${Number(player.money).toLocaleString()}</td>
-                        </tr>`;
+                        </tr>
+                    `;
                 });
             });
         }
@@ -126,6 +132,7 @@ class GodotBackendHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(data_dict).encode("utf-8"))
 
     def do_OPTIONS(self):
+        """Handles browser CORS preflight."""
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -138,9 +145,11 @@ class GodotBackendHandler(BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html")
             self.end_headers()
             self.wfile.write(DASHBOARD_HTML.encode("utf-8"))
+
         elif self.path == "/api/scores":
             db, _ = get_db_from_github()
             self.send_json(db)
+
         elif self.path == "/ping":
             self.send_response(200)
             self.end_headers()
@@ -171,12 +180,14 @@ class GodotBackendHandler(BaseHTTPRequestHandler):
             
             if "accounts" not in db:
                 db["accounts"] = {}
+            if "players" not in db:
+                db["players"] = {}
             
             if username in db["accounts"]:
                 return self.send_json({"success": False, "error": "Username already exists!"}, 400)
             
             db["accounts"][username] = {"password_hash": hash_password(password)}
-            db["players"][username] = {"money": 0}
+            db["players"][username] = {"money": 0, "upgrade_levels": {}}
             save_db_to_github(db, sha)
             return self.send_json({"success": True, "msg": f"Account '{username}' created!"})
 
@@ -200,28 +211,50 @@ class GodotBackendHandler(BaseHTTPRequestHandler):
             if account["password_hash"] != hash_password(password):
                 return self.send_json({"success": False, "error": "Wrong password."}, 400)
             
-            player_data = db["players"].get(username, {"money": 0})
-            return self.send_json({"success": True, "msg": "Login successful!", "money": player_data.get("money", 0)})
+            player_data = db["players"].get(username, {"money": 0, "upgrade_levels": {}})
+            return self.send_json({
+                "success": True,
+                "msg": "Login successful!",
+                "money": player_data.get("money", 0),
+                "upgrade_levels": player_data.get("upgrade_levels", {})
+            })
 
         # --- SAVE ---
         elif self.path == "/api/save":
             player = payload.get("player", "").strip().lower()
             if not player:
-                return self.send_json({"success": False, "error": "Missing player."}, 400)
+                return self.send_json({"success": False, "error": "Missing player profile identifier."}, 400)
+            
             db, sha = get_db_from_github()
+            if "players" not in db:
+                db["players"] = {}
+            
             incoming_money = int(payload.get("money", 0))
-            db["players"][player] = {"money": incoming_money}
+            incoming_upgrades = payload.get("upgrade_levels", {})
+            
+            db["players"][player] = {
+                "money": incoming_money,
+                "upgrade_levels": incoming_upgrades
+            }
             save_db_to_github(db, sha)
-            return self.send_json({"success": True, "msg": f"Saved for {player}."})
+            return self.send_json({"success": True, "msg": f"Progress compiled for {player}."})
 
         # --- LOAD ---
         elif self.path == "/api/load":
             player = payload.get("player", "").strip().lower()
             if not player:
-                return self.send_json({"success": False, "error": "Missing player."}, 400)
+                return self.send_json({"success": False, "error": "Missing player profile identifier."}, 400)
+            
             db, sha = get_db_from_github()
-            player_data = db["players"].get(player, {"money": 0})
-            return self.send_json({"success": True, "money": player_data.get("money", 0)})
+            player_data = db["players"].get(player, {"money": 0, "upgrade_levels": {}})
+            return self.send_json({
+                "success": True,
+                "money": player_data.get("money", 0),
+                "upgrade_levels": player_data.get("upgrade_levels", {})
+            })
+
+        else:
+            self.send_json({"success": False, "error": "Unknown endpoint."}, 404)
 
 def run():
     port = int(os.environ.get("PORT", 10000))
