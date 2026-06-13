@@ -1,11 +1,11 @@
 {
   "players": {
     "test": {
-      "money": 4986119,
+      "money": 4991788,
       "xp": 20781,
       "level": 53,
       "gear_levels": {
-        "click_power": 13
+        "click_power": 12
       },
       "intro_done": true,
       "best_difficulty": "easy"
