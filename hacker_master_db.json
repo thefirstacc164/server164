@@ -1,7 +1,7 @@
 {
   "players": {
     "test": {
-      "money": 687843309,
+      "money": 688187888,
       "xp": 28871,
       "level": 54,
       "gear_levels": {
@@ -13,7 +13,7 @@
         "crypto_farm": 3,
         "dark_theme": 1.0,
         "double_reward": 5,
-        "firewall": 8,
+        "firewall": 1,
         "hack_grinder": 10,
         "hack_speed": 10.0,
         "hacker_title": 1.0,
