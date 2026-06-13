@@ -1,7 +1,7 @@
 {
   "players": {
     "test": {
-      "money": 988866874,
+      "money": 984366874,
       "xp": 28871,
       "level": 54,
       "gear_levels": {
@@ -9,7 +9,7 @@
         "botnet": 5,
         "click_power": 20.0,
         "coin_boost": 10.0,
-        "crypto_farm": 2,
+        "crypto_farm": 3,
         "dark_theme": 1.0,
         "hack_grinder": 10,
         "hack_speed": 10.0,
