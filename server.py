@@ -12,89 +12,71 @@ REPO_NAME = "server164"
 FILE_PATH = "hacker_master_db.json"
 GITHUB_API_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{FILE_PATH}"
 
+# PVP CONFIG
+ATTACK_COOLDOWN_SAME_TARGET = 3600  # 1 hour
+ATTACK_COOLDOWN_GLOBAL = 30  # 30 sec between any attacks
+SHIELD_DURATION_PER_LEVEL = 1800  # 30 min per shield level
+BASE_STEAL_AMOUNT = 10000  # Base HC stolen per attack
+STEAL_PER_LEVEL = 10000  # Extra HC per satellite_hack level
+MAX_STEAL = 100000  # Hard cap
+FIREWALL_REDUCTION = 0.20  # 20% reduction per firewall level
+
 
 def get_db():
-    """Fetches the database from GitHub. Handles missing/empty/corrupt files gracefully."""
     headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
-    
     try:
         resp = requests.get(GITHUB_API_URL, headers=headers, timeout=15)
     except Exception as e:
         print(f"[get_db] Network error: {e}")
-        return {"players": {}, "accounts": {}}, None
+        return {"players": {}, "accounts": {}, "attacks": {}, "shields": {}}, None
     
-    # File doesn't exist on GitHub yet
     if resp.status_code == 404:
-        print("[get_db] File not found on GitHub, returning empty DB.")
-        return {"players": {}, "accounts": {}}, None
-    
-    # Any other non-200 status
+        return {"players": {}, "accounts": {}, "attacks": {}, "shields": {}}, None
     if resp.status_code != 200:
-        print(f"[get_db] GitHub returned status {resp.status_code}: {resp.text[:200]}")
-        return {"players": {}, "accounts": {}}, None
+        print(f"[get_db] Status {resp.status_code}")
+        return {"players": {}, "accounts": {}, "attacks": {}, "shields": {}}, None
     
-    # Try to parse the response
     try:
         gh_data = resp.json()
         sha = gh_data.get("sha")
         content_b64 = gh_data.get("content", "")
-        
         if not content_b64:
-            print("[get_db] File is empty.")
-            return {"players": {}, "accounts": {}}, sha
-        
+            return {"players": {}, "accounts": {}, "attacks": {}, "shields": {}}, sha
         decoded = base64.b64decode(content_b64).decode("utf-8").strip()
-        
         if not decoded:
-            print("[get_db] Decoded content is empty.")
-            return {"players": {}, "accounts": {}}, sha
-        
-        # Parse the actual JSON
-        try:
-            db = json.loads(decoded)
-            # Ensure structure
-            if not isinstance(db, dict):
-                db = {"players": {}, "accounts": {}}
-            db.setdefault("players", {})
-            db.setdefault("accounts", {})
-            return db, sha
-        except json.JSONDecodeError as e:
-            print(f"[get_db] Corrupted JSON in DB file: {e}. Resetting.")
-            return {"players": {}, "accounts": {}}, sha
-            
+            return {"players": {}, "accounts": {}, "attacks": {}, "shields": {}}, sha
+        db = json.loads(decoded)
+        if not isinstance(db, dict):
+            db = {}
+        db.setdefault("players", {})
+        db.setdefault("accounts", {})
+        db.setdefault("attacks", {})
+        db.setdefault("shields", {})
+        return db, sha
     except Exception as e:
-        print(f"[get_db] Unexpected error: {e}")
-        return {"players": {}, "accounts": {}}, None
+        print(f"[get_db] Parse error: {e}")
+        return {"players": {}, "accounts": {}, "attacks": {}, "shields": {}}, None
 
 
 def save_db(db_data, current_sha=None):
-    """Saves the database to GitHub. Returns True on success, False on failure."""
     headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
-    
-    # Re-fetch sha if missing (file might have been created since)
     if not current_sha:
         try:
-            get_resp = requests.get(GITHUB_API_URL, headers=headers, timeout=10)
-            if get_resp.status_code == 200:
-                current_sha = get_resp.json().get("sha")
-        except Exception as e:
-            print(f"[save_db] Sha fetch error: {e}")
-    
+            r = requests.get(GITHUB_API_URL, headers=headers, timeout=10)
+            if r.status_code == 200:
+                current_sha = r.json().get("sha")
+        except:
+            pass
     json_string = json.dumps(db_data, indent=2)
     encoded = base64.b64encode(json_string.encode("utf-8")).decode("utf-8")
     payload = {"message": "Hacker Master save", "content": encoded}
     if current_sha:
         payload["sha"] = current_sha
-    
     try:
-        put_resp = requests.put(GITHUB_API_URL, headers=headers, json=payload, timeout=15)
-        if put_resp.status_code not in [200, 201]:
-            print(f"[save_db] GitHub PUT failed: {put_resp.status_code} - {put_resp.text[:200]}")
-            return False
-        print("[save_db] Save successful.")
-        return True
+        r = requests.put(GITHUB_API_URL, headers=headers, json=payload, timeout=15)
+        return r.status_code in [200, 201]
     except Exception as e:
-        print(f"[save_db] Network error: {e}")
+        print(f"[save_db] Error: {e}")
         return False
 
 
@@ -127,14 +109,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     .btc { color: #0ff; font-weight: bold; }
     .lvl { color: #ff0; }
     .rank { color: #f55; }
+    .shield { color: #ff0; }
 </style>
 </head>
 <body>
 <div class="frame">
 <h1>>> HACKER MASTER NETWORK <<</h1>
 <table>
-<thead><tr><th>Rank</th><th>Handle</th><th>Level</th><th>Bitcoins</th></tr></thead>
-<tbody id="board"><tr><td colspan="4" style="text-align:center;">Loading...</td></tr></tbody>
+<thead><tr><th>Rank</th><th>Handle</th><th>Level</th><th>Bitcoins</th><th>Status</th></tr></thead>
+<tbody id="board"><tr><td colspan="5" style="text-align:center;">Loading...</td></tr></tbody>
 </table>
 </div>
 <script>
@@ -144,9 +127,17 @@ function refresh() {
         t.innerHTML = "";
         let list = Object.keys(data.players).map(n => ({name:n, ...data.players[n]}));
         list.sort((a,b) => (b.level||1) - (a.level||1) || (b.money||0) - (a.money||0));
-        if(list.length===0) { t.innerHTML = "<tr><td colspan='4' style='text-align:center;'>No hackers.</td></tr>"; return; }
+        if(list.length===0) { t.innerHTML = "<tr><td colspan='5' style='text-align:center;'>No hackers.</td></tr>"; return; }
+        const now = Math.floor(Date.now()/1000);
+        const shields = data.shields || {};
         list.forEach((p,i) => {
-            t.innerHTML += `<tr><td class="rank">#${i+1}</td><td><b>${p.name}</b></td><td class="lvl">LVL ${p.level||1}</td><td class="btc">${Number(p.money||0).toLocaleString()}</td></tr>`;
+            let status = "Active";
+            const shield = shields[p.name];
+            if (shield && shield.expire > now) {
+                const mins = Math.floor((shield.expire - now) / 60);
+                status = `🛡 SHIELDED (${mins}m)`;
+            }
+            t.innerHTML += `<tr><td class="rank">#${i+1}</td><td><b>${p.name}</b></td><td class="lvl">LVL ${p.level||1}</td><td class="btc">${Number(p.money||0).toLocaleString()}</td><td class="shield">${status}</td></tr>`;
         });
     });
 }
@@ -168,7 +159,7 @@ class GameHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(data).encode("utf-8"))
         except Exception as e:
-            print(f"[send_json] Error: {e}")
+            print(f"[send_json] {e}")
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -201,11 +192,7 @@ class GameHandler(BaseHTTPRequestHandler):
             else:
                 self.send_json({"error": "Unknown endpoint"}, 404)
         except Exception as e:
-            print(f"[do_GET] Error: {e}")
-            try:
-                self.send_json({"success": False, "error": "Server error"}, 500)
-            except:
-                pass
+            print(f"[do_GET] {e}")
 
     def do_POST(self):
         try:
@@ -213,10 +200,10 @@ class GameHandler(BaseHTTPRequestHandler):
             raw = self.rfile.read(length).decode('utf-8') if length > 0 else "{}"
             payload = json.loads(raw)
         except Exception as e:
-            print(f"[do_POST] Bad JSON: {e}")
-            return self.send_json({"success": False, "error": "Bad JSON in request"}, 400)
+            return self.send_json({"success": False, "error": "Bad JSON"}, 400)
 
         try:
+            # === REGISTER ===
             if self.path == "/api/register":
                 u = payload.get("username", "").strip().lower()
                 p = payload.get("password", "").strip()
@@ -228,9 +215,10 @@ class GameHandler(BaseHTTPRequestHandler):
                 db["accounts"][u] = {"password_hash": hash_pwd(p)}
                 db["players"][u] = default_player()
                 if not save_db(db, sha):
-                    return self.send_json({"success": False, "error": "DB save failed (check server logs)."}, 500)
+                    return self.send_json({"success": False, "error": "DB save failed."}, 500)
                 return self.send_json({"success": True, "msg": f"Hacker '{u}' registered."})
 
+            # === LOGIN ===
             elif self.path == "/api/login":
                 u = payload.get("username", "").strip().lower()
                 p = payload.get("password", "").strip()
@@ -246,6 +234,7 @@ class GameHandler(BaseHTTPRequestHandler):
                         pdata[k] = v
                 return self.send_json({"success": True, "player": pdata})
 
+            # === SAVE ===
             elif self.path == "/api/save":
                 u = payload.get("player", "").strip().lower()
                 if not u:
@@ -260,9 +249,10 @@ class GameHandler(BaseHTTPRequestHandler):
                 existing["best_difficulty"] = payload.get("best_difficulty", existing.get("best_difficulty", "easy"))
                 db["players"][u] = existing
                 if not save_db(db, sha):
-                    return self.send_json({"success": False, "error": "DB save failed."}, 500)
+                    return self.send_json({"success": False, "error": "Save failed."}, 500)
                 return self.send_json({"success": True})
 
+            # === LOAD ===
             elif self.path == "/api/load":
                 u = payload.get("player", "").strip().lower()
                 db, _ = get_db()
@@ -272,16 +262,193 @@ class GameHandler(BaseHTTPRequestHandler):
                         pdata[k] = v
                 return self.send_json({"success": True, "player": pdata})
 
+            # === GET PVP TARGETS (list of attackable players) ===
+            elif self.path == "/api/pvp_targets":
+                u = payload.get("player", "").strip().lower()
+                db, _ = get_db()
+                now = int(time.time())
+                shields = db.get("shields", {})
+                
+                targets = []
+                for name, pdata in db.get("players", {}).items():
+                    if name == u:  # Don't list yourself
+                        continue
+                    
+                    # Check VPN cloak
+                    gear = pdata.get("gear_levels", {})
+                    has_vpn = int(gear.get("vpn_cloak", 0)) > 0
+                    
+                    # Check shield
+                    shield_data = shields.get(name, {})
+                    shielded = int(shield_data.get("expire", 0)) > now
+                    
+                    targets.append({
+                        "name": name,
+                        "level": pdata.get("level", 1),
+                        "money": pdata.get("money", 0),
+                        "shielded": shielded,
+                        "cloaked": has_vpn
+                    })
+                
+                # Sort by money descending
+                targets.sort(key=lambda x: -x["money"])
+                return self.send_json({"success": True, "targets": targets})
+
+            # === ATTACK PLAYER ===
+            elif self.path == "/api/attack":
+                attacker = payload.get("attacker", "").strip().lower()
+                target = payload.get("target", "").strip().lower()
+                
+                if not attacker or not target:
+                    return self.send_json({"success": False, "error": "Missing player names."}, 400)
+                if attacker == target:
+                    return self.send_json({"success": False, "error": "You can't hack yourself!"}, 400)
+                
+                db, sha = get_db()
+                now = int(time.time())
+                
+                # Check attacker exists and has satellite_hack
+                attacker_data = db["players"].get(attacker)
+                if not attacker_data:
+                    return self.send_json({"success": False, "error": "Attacker not found."}, 400)
+                
+                attacker_gear = attacker_data.get("gear_levels", {})
+                sat_level = int(attacker_gear.get("satellite_hack", 0))
+                if sat_level == 0:
+                    return self.send_json({"success": False, "error": "You need Satellite Hack from the shop!"}, 400)
+                
+                # Check target exists
+                target_data = db["players"].get(target)
+                if not target_data:
+                    return self.send_json({"success": False, "error": "Target not found."}, 400)
+                
+                # Check global cooldown
+                attacks = db.get("attacks", {})
+                last_global = attacks.get(f"{attacker}__last", 0)
+                if now - last_global < ATTACK_COOLDOWN_GLOBAL:
+                    remaining = ATTACK_COOLDOWN_GLOBAL - (now - last_global)
+                    return self.send_json({"success": False, "error": f"Wait {remaining}s before next attack."}, 400)
+                
+                # Check same-target cooldown
+                last_attack = attacks.get(f"{attacker}->{target}", 0)
+                if now - last_attack < ATTACK_COOLDOWN_SAME_TARGET:
+                    remaining_min = (ATTACK_COOLDOWN_SAME_TARGET - (now - last_attack)) // 60
+                    return self.send_json({"success": False, "error": f"This target on cooldown for {remaining_min}m."}, 400)
+                
+                # Check target's shield
+                shields = db.get("shields", {})
+                shield_data = shields.get(target, {})
+                if int(shield_data.get("expire", 0)) > now:
+                    mins = (int(shield_data.get("expire", 0)) - now) // 60
+                    # Counter-hack check (target's counter)
+                    target_counter = int(target_data.get("gear_levels", {}).get("counter_hack", 0))
+                    if target_counter > 0:
+                        # Counter-hack steals back!
+                        counter_amount = min(5000 * target_counter, attacker_data.get("money", 0))
+                        attacker_data["money"] = max(0, attacker_data.get("money", 0) - counter_amount)
+                        target_data["money"] = target_data.get("money", 0) + counter_amount
+                        db["players"][attacker] = attacker_data
+                        db["players"][target] = target_data
+                        save_db(db, sha)
+                        return self.send_json({
+                            "success": False,
+                            "error": f"🛡 {target} is shielded! Their counter-hack stole {counter_amount} HC from you!",
+                            "counter_loss": counter_amount
+                        })
+                    return self.send_json({"success": False, "error": f"🛡 Target shielded for {mins}m."}, 400)
+                
+                # Check target's VPN cloak (should have been filtered earlier but double-check)
+                target_vpn = int(target_data.get("gear_levels", {}).get("vpn_cloak", 0))
+                if target_vpn > 0 and randf_chance(target_vpn * 0.2):
+                    return self.send_json({"success": False, "error": "🌫 Target's VPN Cloak hid them — attack failed!"}, 400)
+                
+                # CALCULATE STEAL AMOUNT
+                # Base: 10K per satellite_hack level
+                steal_amount = min(MAX_STEAL, BASE_STEAL_AMOUNT + (sat_level - 1) * STEAL_PER_LEVEL)
+                
+                # Apply firewall reduction
+                target_firewall = int(target_data.get("gear_levels", {}).get("firewall", 0))
+                reduction = min(0.95, FIREWALL_REDUCTION * target_firewall)
+                steal_amount = int(steal_amount * (1.0 - reduction))
+                
+                # Cap to target's actual money
+                steal_amount = min(steal_amount, target_data.get("money", 0))
+                if steal_amount <= 0:
+                    return self.send_json({"success": False, "error": "Target has no HackCoins to steal!"}, 400)
+                
+                # Apply theft
+                target_data["money"] = max(0, target_data.get("money", 0) - steal_amount)
+                attacker_data["money"] = attacker_data.get("money", 0) + steal_amount
+                
+                # Counter-hack check (target steals back partially)
+                counter_amount = 0
+                target_counter = int(target_data.get("gear_levels", {}).get("counter_hack", 0))
+                if target_counter > 0:
+                    counter_amount = min(2000 * target_counter, attacker_data.get("money", 0))
+                    if counter_amount > 0:
+                        attacker_data["money"] = max(0, attacker_data.get("money", 0) - counter_amount)
+                        target_data["money"] = target_data.get("money", 0) + counter_amount
+                
+                # Save attacks
+                attacks[f"{attacker}__last"] = now
+                attacks[f"{attacker}->{target}"] = now
+                db["attacks"] = attacks
+                db["players"][attacker] = attacker_data
+                db["players"][target] = target_data
+                
+                if not save_db(db, sha):
+                    return self.send_json({"success": False, "error": "Save failed."}, 500)
+                
+                return self.send_json({
+                    "success": True,
+                    "stolen": steal_amount,
+                    "counter_loss": counter_amount,
+                    "new_money": attacker_data["money"],
+                    "target_firewall": target_firewall,
+                    "target_counter": target_counter > 0
+                })
+
+            # === ACTIVATE SHIELD ===
+            elif self.path == "/api/shield":
+                u = payload.get("player", "").strip().lower()
+                db, sha = get_db()
+                pdata = db["players"].get(u)
+                if not pdata:
+                    return self.send_json({"success": False, "error": "Player not found."}, 400)
+                
+                shield_level = int(pdata.get("gear_levels", {}).get("proxy_shield", 0))
+                if shield_level == 0:
+                    return self.send_json({"success": False, "error": "You don't have Proxy Shield!"}, 400)
+                
+                now = int(time.time())
+                shields = db.get("shields", {})
+                existing = shields.get(u, {})
+                if int(existing.get("expire", 0)) > now:
+                    mins = (int(existing.get("expire", 0)) - now) // 60
+                    return self.send_json({"success": False, "error": f"Shield already active for {mins}m."}, 400)
+                
+                duration = SHIELD_DURATION_PER_LEVEL * shield_level
+                shields[u] = {"expire": now + duration}
+                db["shields"] = shields
+                save_db(db, sha)
+                return self.send_json({
+                    "success": True,
+                    "duration_minutes": duration // 60,
+                    "msg": f"Shield active for {duration // 60} minutes!"
+                })
+
             else:
                 self.send_json({"success": False, "error": "Unknown endpoint."}, 404)
         except Exception as e:
-            print(f"[do_POST] Unhandled error: {e}")
             import traceback
             traceback.print_exc()
-            try:
-                self.send_json({"success": False, "error": f"Server crashed: {str(e)[:100]}"}, 500)
-            except:
-                pass
+            print(f"[do_POST] {e}")
+            self.send_json({"success": False, "error": f"Server error: {str(e)[:100]}"}, 500)
+
+
+def randf_chance(probability):
+    import random
+    return random.random() < probability
 
 
 def run():
@@ -289,6 +456,7 @@ def run():
     httpd = HTTPServer(("0.0.0.0", port), GameHandler)
     print(f"Hacker Master backend live on :{port}")
     httpd.serve_forever()
+
 
 if __name__ == "__main__":
     run()
