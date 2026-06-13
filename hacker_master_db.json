@@ -1,11 +1,11 @@
 {
   "players": {
     "test": {
-      "money": 570801427,
-      "xp": 134483,
+      "money": 570806827,
+      "xp": 134570,
       "level": 54,
       "gear_levels": {
-        "_hacks_total": 1,
+        "_hacks_total": 2,
         "auto_guess": 5.0,
         "botnet": 5.0,
         "click_power": 20.0,
