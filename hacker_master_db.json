@@ -1,11 +1,12 @@
 {
   "players": {
     "test": {
-      "money": 570806827,
-      "xp": 134570,
+      "money": 570812229,
+      "xp": 134990,
       "level": 54,
       "gear_levels": {
-        "_hacks_total": 2,
+        "_crypto_bytcoin": 0,
+        "_hacks_total": 3,
         "auto_guess": 5.0,
         "botnet": 5.0,
         "click_power": 20.0,
@@ -30,7 +31,8 @@
         "xp_boost": 10.0
       },
       "intro_done": true,
-      "best_difficulty": "easy"
+      "best_difficulty": "easy",
+      "usd": 0
     },
     "test2": {
       "money": 0,
@@ -53,5 +55,6 @@
     "test__last": 1781325151,
     "test->test2": 1781325151
   },
-  "shields": {}
+  "shields": {},
+  "cheaters": {}
 }
