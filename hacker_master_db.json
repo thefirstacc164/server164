@@ -1,9 +1,9 @@
 {
   "players": {
     "test": {
-      "money": 1012082,
-      "xp": 127321,
-      "level": 53,
+      "money": 1237082,
+      "xp": 28871,
+      "level": 54,
       "gear_levels": {
         "auto_guess": 5.0,
         "botnet": 4.0,
