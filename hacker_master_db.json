@@ -1,13 +1,13 @@
 {
   "players": {
     "test": {
-      "money": 4539099,
+      "money": 4477549,
       "xp": 20781,
       "level": 53,
       "gear_levels": {
         "auto_guess": 5,
         "click_power": 20,
-        "coin_boost": 7,
+        "coin_boost": 8,
         "hack_speed": 10,
         "word_reveal": 5,
         "xp_boost": 10
