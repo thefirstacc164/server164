@@ -1,7 +1,7 @@
 {
   "players": {
     "test": {
-      "money": 737082,
+      "money": 487082,
       "xp": 28871,
       "level": 54,
       "gear_levels": {
@@ -17,6 +17,7 @@
         "insta_hack": 1.0,
         "matrix_bg": 1.0,
         "multi_hack": 1.0,
+        "satellite_hack": 1,
         "word_reveal": 5.0,
         "xp_boost": 10.0
       },
