@@ -1,15 +1,16 @@
 {
   "players": {
     "test": {
-      "money": 4728278,
+      "money": 4372913,
       "xp": 20781,
       "level": 53,
       "gear_levels": {
         "auto_guess": 5,
         "click_power": 20,
+        "coin_boost": 9,
         "hack_speed": 10,
         "word_reveal": 5,
-        "xp_boost": 4
+        "xp_boost": 10
       },
       "intro_done": true,
       "best_difficulty": "easy"
