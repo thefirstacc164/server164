@@ -107,8 +107,15 @@ class GameHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, HEAD, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_HEAD(self):
+        """Handles HEAD requests (used by UptimeRobot and other monitors)."""
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
 
     def do_GET(self):
@@ -122,6 +129,7 @@ class GameHandler(BaseHTTPRequestHandler):
             self.send_json(db)
         elif self.path == "/ping":
             self.send_response(200)
+            self.send_header("Content-type", "text/plain")
             self.end_headers()
             self.wfile.write(b"OK")
 
@@ -157,7 +165,6 @@ class GameHandler(BaseHTTPRequestHandler):
             if acc["password_hash"] != hash_pwd(p):
                 return self.send_json({"success": False, "error": "Wrong password."}, 400)
             pdata = db.get("players", {}).get(u, default_player())
-            # Fill in missing fields from default
             for k, v in default_player().items():
                 if k not in pdata:
                     pdata[k] = v
