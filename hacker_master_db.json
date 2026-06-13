@@ -1,14 +1,19 @@
 {
   "players": {
     "test": {
-      "money": 4757831,
+      "money": 1152532,
       "xp": 20781,
       "level": 53,
       "gear_levels": {
-        "auto_guess": 1,
+        "auto_guess": 5,
+        "botnet": 3,
         "click_power": 20,
+        "coin_boost": 10,
+        "hack_grinder": 8,
         "hack_speed": 10,
-        "word_reveal": 5
+        "multi_hack": 1,
+        "word_reveal": 5,
+        "xp_boost": 10
       },
       "intro_done": true,
       "best_difficulty": "easy"
