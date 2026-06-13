@@ -1,7 +1,7 @@
 {
   "players": {
     "test": {
-      "money": 999999999,
+      "money": 997439999,
       "xp": 28871,
       "level": 54,
       "gear_levels": {
@@ -9,15 +9,15 @@
         "botnet": 4.0,
         "click_power": 20.0,
         "coin_boost": 10.0,
-        "crypto_farm": 1,
+        "crypto_farm": 1.0,
         "dark_theme": 1.0,
-        "hack_grinder": 8.0,
+        "hack_grinder": 9,
         "hack_speed": 10.0,
         "hacker_title": 1.0,
         "insta_hack": 1.0,
         "matrix_bg": 1.0,
         "multi_hack": 1.0,
-        "satellite_hack": 1,
+        "satellite_hack": 1.0,
         "word_reveal": 5.0,
         "xp_boost": 10.0
       },
@@ -29,5 +29,7 @@
     "test": {
       "password_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
     }
-  }
+  },
+  "attacks": {},
+  "shields": {}
 }
