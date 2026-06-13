@@ -9,7 +9,7 @@ import requests
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 REPO_OWNER = "thefirstacc164"
 REPO_NAME = "server164"
-FILE_PATH = "clicker_save_db.json"
+FILE_PATH = "hacker_master_db.json"
 GITHUB_API_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{FILE_PATH}"
 
 
