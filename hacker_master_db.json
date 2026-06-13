@@ -1,12 +1,12 @@
 {
   "players": {
     "test": {
-      "money": 992319999,
+      "money": 990366874,
       "xp": 28871,
       "level": 54,
       "gear_levels": {
         "auto_guess": 5.0,
-        "botnet": 4.0,
+        "botnet": 5,
         "click_power": 20.0,
         "coin_boost": 10.0,
         "crypto_farm": 1.0,
