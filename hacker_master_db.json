@@ -1,12 +1,12 @@
 {
   "players": {
     "test": {
-      "money": 14891,
-      "xp": 136306,
-      "level": 54,
+      "money": 419891,
+      "xp": 6256,
+      "level": 55,
       "gear_levels": {
         "_crypto_bytcoin": 6561102,
-        "_hacks_total": 6,
+        "_hacks_total": 7,
         "auto_guess": 5.0,
         "botnet": 5.0,
         "click_power": 20.0,
