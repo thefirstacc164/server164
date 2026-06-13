@@ -1,7 +1,7 @@
 {
   "players": {
     "test": {
-      "money": 647284964,
+      "money": 683284964,
       "xp": 28871,
       "level": 54,
       "gear_levels": {
@@ -21,7 +21,7 @@
         "matrix_bg": 1.0,
         "multi_hack": 1.0,
         "power_boost": 5,
-        "prestige_reset": 4,
+        "prestige_reset": 2,
         "proxy_shield": 5,
         "satellite_hack": 10,
         "vpn_cloak": 3,
