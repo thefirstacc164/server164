@@ -1,7 +1,7 @@
 {
   "players": {
     "test": {
-      "money": 674284964,
+      "money": 695709928,
       "xp": 28871,
       "level": 54,
       "gear_levels": {
@@ -9,11 +9,9 @@
         "botnet": 5,
         "click_power": 20.0,
         "coin_boost": 10.0,
-        "counter_hack": 5,
         "crypto_farm": 3,
         "dark_theme": 1.0,
         "double_reward": 5,
-        "firewall": 10,
         "hack_grinder": 10,
         "hack_speed": 10.0,
         "hacker_title": 1.0,
@@ -21,10 +19,9 @@
         "matrix_bg": 1.0,
         "multi_hack": 1.0,
         "power_boost": 5,
-        "prestige_reset": 3,
         "proxy_shield": 5,
         "satellite_hack": 10,
-        "vpn_cloak": 3,
+        "vpn_cloak": 1,
         "word_reveal": 5.0,
         "xp_boost": 10.0
       },
