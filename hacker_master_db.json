@@ -1,17 +1,17 @@
 {
-  "players": {
-    "test": {
-      "money": 437,
-      "xp": 121,
-      "level": 2,
-      "gear_levels": {},
-      "intro_done": false,
-      "best_difficulty": "easy"
+    "players": {
+        "test": {
+            "money": 1000000,
+            "xp": 0,
+            "level": 50,
+            "gear_levels": {},
+            "intro_done": true,
+            "best_difficulty": "easy"
+        }
+    },
+    "accounts": {
+        "test": {
+            "password_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
     }
-  },
-  "accounts": {
-    "test": {
-      "password_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
-    }
-  }
 }
