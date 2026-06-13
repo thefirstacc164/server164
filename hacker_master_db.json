@@ -1,7 +1,7 @@
 {
   "players": {
     "test": {
-      "money": 2000000000,
+      "money": 20000000,
       "xp": 28871,
       "level": 54,
       "gear_levels": {
