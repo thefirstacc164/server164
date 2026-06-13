@@ -1,9 +1,9 @@
 {
   "players": {
     "test": {
-      "money": 67,
+      "money": 670000000,
       "xp": 3000000000000000000000,
-      "level": 1,
+      "level": 100000000,
       "gear_levels": {},
       "intro_done": false,
       "best_difficulty": "easy"
