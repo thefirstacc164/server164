@@ -1,8 +1,8 @@
 {
   "players": {
     "test": {
-      "money": 185,
-      "xp": 25,
+      "money": 249,
+      "xp": 49,
       "level": 2,
       "gear_levels": {},
       "intro_done": false,
