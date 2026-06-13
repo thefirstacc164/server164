@@ -1,7 +1,7 @@
 {
   "players": {
     "test": {
-      "money": 566293237,
+      "money": 566293387,
       "xp": 29308,
       "level": 54,
       "gear_levels": {
@@ -32,7 +32,7 @@
       "best_difficulty": "easy"
     },
     "test2": {
-      "money": 150,
+      "money": 0,
       "xp": 10,
       "level": 2,
       "gear_levels": {},
@@ -48,6 +48,9 @@
       "password_hash": "60303ae22b998861bce3b28f33eec1be758a213c86c93c076dbe9f558c11c752"
     }
   },
-  "attacks": {},
+  "attacks": {
+    "test__last": 1781325151,
+    "test->test2": 1781325151
+  },
   "shields": {}
 }
